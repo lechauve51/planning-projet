@@ -1,7 +1,7 @@
 # GitHub Repository Setup
 
 Ce dossier contient les workflows GitHub Actions pour automatiser le build et le déploiement.
-J'ai créer cette application pour un besoin spécifique, mais j'entend l'améliorer afin d'avoir un maximum de fonctionnalités. N'hésitez pas à participer ! 
+
 
 ## Workflows disponibles
 
