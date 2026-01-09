@@ -1,6 +1,7 @@
 # Planning Builder
 
 Application web de type Gantt pour la gestion de planning de projets, pensée pour un usage conseil / CODIR.
+J'ai créer cette application pour un besoin spécifique, mais j'entend l'améliorer afin d'avoir un maximum de fonctionnalités. N'hésitez pas à participer !
 
 [![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](https://www.docker.com/)
 [![Next.js](https://img.shields.io/badge/Next.js-14-black)](https://nextjs.org/)
