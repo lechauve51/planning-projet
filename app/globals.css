@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
+}
+
+body {
+  color: #111827;
+  background: radial-gradient(1200px 420px at 15% 0%, rgba(183,165,106,.18), transparent 55%),
+              radial-gradient(900px 420px at 85% 0%, rgba(27,42,74,.12), transparent 55%),
+              #f7f6f2;
+  min-height: 100vh;
+}
+

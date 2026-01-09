@@ -1,0 +1,816 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Portefeuille projets — Gantt éditable (2026–2029)</title>
+  <style>
+    :root{
+      /* Palette inspirée de la slide (or/beige + bleu marine) */
+      --gold: #b7a56a;
+      --gold-2:#d7c89a;
+      --navy: #1b2a4a;
+      --navy-2:#24365c;
+
+      --ink:  #111827;
+      --muted:#5b667a;
+
+      --bg:   #f7f6f2;
+      --card: #ffffff;
+      --line: #e6e2d6;
+      --line2:#d8d1bf;
+      --gridStrong:#cbbf9c; /* délimitation T1/T2/T3/T4 */
+      --shadow: 0 10px 24px rgba(27,42,74,.10);
+      --radius: 14px;
+
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      background: radial-gradient(1200px 420px at 15% 0%, rgba(183,165,106,.18), transparent 55%),
+                  radial-gradient(900px 420px at 85% 0%, rgba(27,42,74,.12), transparent 55%),
+                  var(--bg);
+      color:var(--ink);
+      font-family:var(--sans);
+      padding:22px;
+    }
+    header{
+      display:flex; gap:16px; align-items:flex-start; justify-content:space-between; flex-wrap:wrap;
+      margin-bottom:14px;
+    }
+    h1{
+      font-size:18px; margin:0 0 6px 0; letter-spacing:.2px;
+      color:var(--navy);
+    }
+    .sub{
+      color:var(--muted);
+      font-size:13px;
+      max-width:1040px;
+      line-height:1.35;
+    }
+    .pill{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:8px 10px;
+      border:1px solid var(--line2);
+      border-radius:999px;
+      background:rgba(255,255,255,.65);
+      color:var(--muted);
+      font-size:12px;
+    }
+    .legend{
+      display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:flex-end;
+    }
+    .dot{width:10px; height:10px; border-radius:99px; display:inline-block}
+
+    main{display:flex; flex-direction:column; gap:14px}
+
+    .yearCard, .editorCard{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+    .cardHead{
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+      padding:12px 14px;
+      background:linear-gradient(90deg, rgba(183,165,106,.22), rgba(255,255,255,.92));
+      border-bottom:1px solid var(--line);
+    }
+    .cardTitle{
+      display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;
+    }
+    .cardTitle h2{
+      margin:0;
+      font-size:15px;
+      letter-spacing:.35px;
+      color:var(--navy);
+    }
+    .count{
+      color:var(--muted);
+      font-size:12px;
+    }
+
+    .wrap{
+      overflow:auto;
+      padding:12px;
+    }
+
+    /* ==== Gantt (1 année = 4 trimestres) ==== */
+    .gantt{
+      min-width:980px;
+      border:1px solid var(--line);
+      border-radius:12px;
+      overflow:hidden;
+      background:#faf9f6;
+    }
+    .gHeader{
+      display:grid;
+      grid-template-columns: repeat(4, 1fr);
+      border-bottom:2px solid var(--gridStrong);
+      background:linear-gradient(180deg, rgba(183,165,106,.16), rgba(255,255,255,.90));
+    }
+    .gHeader div{
+      padding:10px 10px;
+      text-align:center;
+      font-family:var(--mono);
+      font-size:12px;
+      color:var(--navy);
+      font-weight:900;
+      border-right:2px solid var(--gridStrong);
+    }
+    .gHeader div:last-child{border-right:none}
+
+    .rows{
+      display:flex;
+      flex-direction:column;
+    }
+    .row{
+      display:grid;
+      grid-template-columns: repeat(4, 1fr);
+      position:relative;
+      height:54px;
+      border-bottom:1px solid rgba(17,24,39,.06);
+      background:#ffffff;
+    }
+    .row:nth-child(even){ background:#fbfaf7; }
+    .row:last-child{border-bottom:none}
+
+    .cell{
+      border-right:2px solid var(--gridStrong);
+      background:transparent;
+    }
+    .cell:last-child{border-right:none}
+
+    .bar{
+      align-self:stretch;
+      justify-self:stretch;
+      margin:10px 8px;
+      border-radius:12px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      padding:0 14px;
+      color:var(--navy);
+      font-size:12.5px;
+      font-weight:900;
+      overflow:hidden;
+      white-space:nowrap;
+      text-overflow:ellipsis;
+      box-shadow: 0 10px 16px rgba(27,42,74,.10);
+      border:1px solid rgba(27,42,74,.12);
+      cursor:pointer;
+    }
+    .bar .name{
+      font-weight:900;
+      color:rgba(27,42,74,.96);
+      width:100%;
+      text-align:center;
+    }
+    .bar .code{
+      font-family:var(--mono);
+      font-weight:1000;
+      color:rgba(27,42,74,.85);
+    }
+
+    .foot{
+      padding:10px 14px 14px 14px;
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.35;
+    }
+
+    /* ====================== ÉDITEUR ====================== */
+    .controls{
+      display:flex; gap:8px; flex-wrap:wrap; align-items:center; justify-content:flex-end;
+    }
+    button{
+      appearance:none;
+      border:1px solid var(--line2);
+      background:#ffffff;
+      color:var(--navy);
+      padding:8px 10px;
+      border-radius:10px;
+      cursor:pointer;
+      font-size:12px;
+      font-weight:800;
+    }
+    button:hover{background:#fbfaf7}
+    button.danger{
+      color:#7a1b1b;
+      border-color:#e2c6c6;
+      background:#fff7f7;
+    }
+    button.danger:hover{background:#fff0f0}
+
+    table{
+      width:100%;
+      border-collapse:separate;
+      border-spacing:0;
+      min-width:1100px;
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius:12px;
+      overflow:hidden;
+    }
+    thead th{
+      position:sticky;
+      top:0;
+      z-index:2;
+      background:linear-gradient(180deg, rgba(183,165,106,.16), rgba(255,255,255,.95));
+      color:var(--navy);
+      font-size:12px;
+      text-align:left;
+      padding:10px 10px;
+      border-bottom:1px solid var(--line);
+      white-space:nowrap;
+    }
+    tbody td{
+      padding:8px 10px;
+      border-bottom:1px solid rgba(17,24,39,.06);
+      vertical-align:middle;
+    }
+    tbody tr:nth-child(even) td{background:#fbfaf7}
+    tbody tr:last-child td{border-bottom:none}
+
+    input[type="text"]{
+      width:100%;
+      border:1px solid var(--line2);
+      border-radius:10px;
+      padding:7px 9px;
+      font-size:12px;
+      color:var(--ink);
+      background:#fff;
+    }
+    select{
+      width:100%;
+      border:1px solid var(--line2);
+      border-radius:10px;
+      padding:7px 9px;
+      font-size:12px;
+      color:var(--ink);
+      background:#fff;
+    }
+    .tiny{
+      width:110px;
+    }
+    .xs{
+      width:80px;
+    }
+    .hint{
+      color:var(--muted);
+      font-size:12px;
+      margin-top:10px;
+      line-height:1.35;
+    }
+
+    /* Modal (édition rapide au clic sur une barre) */
+    .modalBackdrop{
+      position:fixed; inset:0; background:rgba(17,24,39,.45);
+      display:none; align-items:center; justify-content:center; padding:18px;
+    }
+    .modal{
+      width:min(780px, 96vw);
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius:16px;
+      box-shadow: 0 18px 40px rgba(27,42,74,.20);
+      overflow:hidden;
+    }
+    .modalHead{
+      padding:12px 14px;
+      border-bottom:1px solid var(--line);
+      background:linear-gradient(90deg, rgba(183,165,106,.20), rgba(255,255,255,.96));
+      display:flex; justify-content:space-between; align-items:center; gap:10px;
+    }
+    .modalHead b{color:var(--navy)}
+    .modalBody{padding:14px}
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+    }
+    .grid label{
+      display:flex; flex-direction:column; gap:6px;
+      font-size:12px; color:var(--muted);
+    }
+    .modalFoot{
+      padding:12px 14px;
+      border-top:1px solid var(--line);
+      display:flex; justify-content:flex-end; gap:8px; flex-wrap:wrap;
+      background:#fbfaf7;
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Portefeuille projets — Planning par année (éditable)</h1>
+    <div class="sub">
+      Tu peux modifier <b>les titres</b> et <b>les durées (début/fin)</b> directement dans le tableau ci-dessous : le Gantt se met à jour automatiquement.
+      <br/>
+      <span class="pill">Conseil : clique sur une étiquette dans le Gantt pour éditer rapidement le projet.</span>
+    </div>
+  </div>
+  <div class="legend" id="legend"></div>
+</header>
+
+<main id="app"></main>
+
+<!-- Modal édition rapide -->
+<div class="modalBackdrop" id="modalBackdrop" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modalHead">
+      <b id="modalTitle">Éditer un projet</b>
+      <button id="modalClose" class="danger">Fermer</button>
+    </div>
+    <div class="modalBody">
+      <div class="grid">
+        <label>Axe principal
+          <select id="mAxis"></select>
+        </label>
+        <label>Code projet
+          <input id="mCode" type="text"/>
+        </label>
+        <label style="grid-column: 1 / -1;">Nom du projet
+          <input id="mName" type="text"/>
+        </label>
+        <label>Début (année)
+          <select id="mSY"></select>
+        </label>
+        <label>Début (trimestre)
+          <select id="mSQ"></select>
+        </label>
+        <label>Fin (année)
+          <select id="mEY"></select>
+        </label>
+        <label>Fin (trimestre)
+          <select id="mEQ"></select>
+        </label>
+      </div>
+      <div class="hint">Astuce : la fin doit être ≥ début. Si besoin, corrige en priorité la fin.</div>
+    </div>
+    <div class="modalFoot">
+      <button id="modalSave">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // === Paramètres ============================================================
+  const years = [2026, 2027, 2028, 2029];
+  const quarters = [1,2,3,4];
+
+  const axisColors = {
+    "Qualité de la donnée": "#d9c890",   // or doux
+    "Relation locataire": "#bcd7f2",     // bleu clair
+    "Rationalisation SI": "#c5e6d2",     // vert pâle
+    "Efficacité collaborateur": "#f2c7c7"// rose pâle
+  };
+  const axisList = Object.keys(axisColors);
+
+  // === Données (calées sur ta matrice 2026–2029) =============================
+  const initialProjects = [
+    {axis:"Qualité de la donnée", code:"P001", name:"Gouvernance et mise en qualité des données patrimoniales", start:{y:2026,q:1}, end:{y:2026,q:2}},
+    {axis:"Qualité de la donnée", code:"P002", name:"Mise au propre du référentiel patrimoine et de l’historique", start:{y:2026,q:3}, end:{y:2027,q:2}},
+    {axis:"Qualité de la donnée", code:"P003", name:"Référentiel des tiers (prestataires, partenaires)", start:{y:2026,q:3}, end:{y:2026,q:3}},
+    {axis:"Qualité de la donnée", code:"P004", name:"Entrepôt de données & plateforme décisionnelle (BIboard cible)", start:{y:2026,q:2}, end:{y:2026,q:4}},
+    {axis:"Qualité de la donnée", code:"P005", name:"Continuité et transfert de compétences", start:{y:2027,q:1}, end:{y:2027,q:2}},
+    {axis:"Qualité de la donnée", code:"P006", name:"Intégration et gouvernance des données BIM dans la chaîne patrimoniale", start:{y:2028,q:1}, end:{y:2028,q:2}},
+    {axis:"Qualité de la donnée", code:"P007", name:"Politique d’archivage des documents et des données", start:{y:2027,q:1}, end:{y:2027,q:1}},
+    {axis:"Qualité de la donnée", code:"P008", name:"POC BIM et stabilisation de la nomenclature associée", start:{y:2028,q:2}, end:{y:2028,q:4}},
+
+    {axis:"Rationalisation SI", code:"P009", name:"Migrer GED PIH", start:{y:2027,q:1}, end:{y:2027,q:3}},
+    {axis:"Efficacité collaborateur", code:"P011", name:"Organisation documentaire chantiers & partage avec les prestataires", start:{y:2027,q:1}, end:{y:2027,q:2}},
+    {axis:"Relation locataire", code:"P013", name:"Portail locataire : enrichissement et nouveaux services", start:{y:2027,q:2}, end:{y:2027,q:4}},
+    {axis:"Efficacité collaborateur", code:"P014", name:"Portail fournisseur unifié", start:{y:2027,q:2}, end:{y:2027,q:3}},
+    {axis:"Efficacité collaborateur", code:"P015", name:"Intranet amélioration de l'existant", start:{y:2027,q:1}, end:{y:2027,q:1}},
+    {axis:"Efficacité collaborateur", code:"P016", name:"Programme de dématérialisation & « zéro papier interne »", start:{y:2026,q:2}, end:{y:2026,q:4}},
+    {axis:"Efficacité collaborateur", code:"P017", name:"Dématérialisation des avis d'échéance", start:{y:2026,q:2}, end:{y:2026,q:2}},
+    {axis:"Rationalisation SI", code:"P018", name:"Outils PDF, signature et automatisation scan", start:{y:2027,q:1}, end:{y:2027,q:1}},
+    {axis:"Efficacité collaborateur", code:"P019", name:"Trajectoire mise sous pli", start:{y:2027,q:1}, end:{y:2027,q:1}},
+    {axis:"Efficacité collaborateur", code:"P022", name:"Structuration et gouvernance de l’environnement collaboratif", start:{y:2026,q:2}, end:{y:2027,q:1}},
+
+    {axis:"Rationalisation SI", code:"P024", name:"Plan cybersécurité (politique SSI, IAM, protection, supervision)", start:{y:2026,q:2}, end:{y:2027,q:4}},
+    {axis:"Rationalisation SI", code:"P025", name:"PRA/PCA et stratégie de sauvegarde / restauration", start:{y:2027,q:1}, end:{y:2027,q:2}},
+    {axis:"Rationalisation SI", code:"P026", name:"Supervision technique et sécurité", start:{y:2026,q:1}, end:{y:2026,q:1}},
+    {axis:"Rationalisation SI", code:"P027", name:"Mise en place d’une gouvernance SI / SDSI structurée", start:{y:2026,q:2}, end:{y:2026,q:2}},
+    {axis:"Efficacité collaborateur", code:"P028", name:"Dispositif de conduite du changement et réseau de référents SI / data", start:{y:2027,q:1}, end:{y:2027,q:2}},
+    {axis:"Efficacité collaborateur", code:"P029", name:"Plan de formation et de sensibilisation (SI & cybersécurité)", start:{y:2026,q:2}, end:{y:2026,q:3}},
+
+    {axis:"Rationalisation SI", code:"KIAMO", name:"Projets Kiamo", start:{y:2027,q:1}, end:{y:2027,q:3}},
+    {axis:"Rationalisation SI", code:"P012", name:"Migration de l’ERP PIH vers NextGen", start:{y:2029,q:1}, end:{y:2029,q:2}},
+  ];
+
+  // Copie de travail (modifiable)
+  let projects = JSON.parse(JSON.stringify(initialProjects));
+
+  // === Helpers ===============================================================
+  function key(p){ return `${p.code}__${p.name}`; }
+
+  function toNum(y,q){ return y*10 + q; }
+
+  function overlapsYear(p, y){
+    const s = toNum(p.start.y, p.start.q);
+    const e = toNum(p.end.y, p.end.q);
+    const ys = toNum(y, 1);
+    const ye = toNum(y, 4);
+    return !(e < ys || s > ye);
+  }
+
+  function clampToYear(p, y){
+    const s = toNum(p.start.y, p.start.q);
+    const e = toNum(p.end.y, p.end.q);
+    const ys = toNum(y, 1);
+    const ye = toNum(y, 4);
+    const cs = Math.max(s, ys);
+    const ce = Math.min(e, ye);
+    return {startQ: cs - y*10, endQ: ce - y*10}; // 1..4
+  }
+
+  function normalizeDates(p){
+    const s = toNum(p.start.y, p.start.q);
+    const e = toNum(p.end.y, p.end.q);
+    if(e < s){
+      // si incohérent : on cale la fin sur le début
+      p.end.y = p.start.y;
+      p.end.q = p.start.q;
+    }
+    // clamp to range (2026..2029)
+    p.start.y = Math.min(Math.max(p.start.y, years[0]), years[years.length-1]);
+    p.end.y   = Math.min(Math.max(p.end.y, years[0]), years[years.length-1]);
+    p.start.q = Math.min(Math.max(p.start.q, 1), 4);
+    p.end.q   = Math.min(Math.max(p.end.q, 1), 4);
+    const s2 = toNum(p.start.y, p.start.q);
+    const e2 = toNum(p.end.y, p.end.q);
+    if(e2 < s2){
+      p.end.y = p.start.y;
+      p.end.q = p.start.q;
+    }
+  }
+
+  function renderLegend(){
+    const legend = document.getElementById("legend");
+    legend.innerHTML = "";
+    Object.entries(axisColors).forEach(([axis, color])=>{
+      const div = document.createElement("div");
+      div.className = "pill";
+      div.innerHTML = `<span class="dot" style="background:${color}; border:1px solid rgba(27,42,74,.12)"></span>${axis}`;
+      legend.appendChild(div);
+    });
+  }
+
+  // === Éditeur (tableau) =====================================================
+  function buildSelect(options, value){
+    const s = document.createElement("select");
+    options.forEach(o=>{
+      const opt = document.createElement("option");
+      opt.value = String(o);
+      opt.textContent = String(o);
+      s.appendChild(opt);
+    });
+    s.value = String(value);
+    return s;
+  }
+
+  function renderEditor(){
+    const editor = document.createElement("section");
+    editor.className = "editorCard";
+
+    const head = document.createElement("div");
+    head.className = "cardHead";
+
+    const title = document.createElement("div");
+    title.className = "cardTitle";
+    title.innerHTML = `<h2>ÉDITEUR — MODIFIER TITRES & DURÉES</h2><span class="count">${projects.length} projet(s)</span>`;
+
+    const controls = document.createElement("div");
+    controls.className = "controls";
+    controls.innerHTML = `
+      <button id="addRow">+ Ajouter un projet</button>
+      <button id="exportJson">Exporter JSON</button>
+      <button id="importJson">Importer JSON</button>
+      <button id="reset" class="danger">Réinitialiser</button>
+      <input id="fileInput" type="file" accept="application/json" style="display:none"/>
+    `;
+
+    head.appendChild(title);
+    head.appendChild(controls);
+    editor.appendChild(head);
+
+    const wrap = document.createElement("div");
+    wrap.className = "wrap";
+
+    const table = document.createElement("table");
+    table.innerHTML = `
+      <thead>
+        <tr>
+          <th style="width:210px">Axe principal</th>
+          <th style="width:120px">Code</th>
+          <th>Nom du projet</th>
+          <th style="width:120px">Début (A)</th>
+          <th style="width:120px">Début (T)</th>
+          <th style="width:120px">Fin (A)</th>
+          <th style="width:120px">Fin (T)</th>
+          <th style="width:110px">Action</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    `;
+
+    const tbody = table.querySelector("tbody");
+
+    const sorted = [...projects].sort((a,b)=> (a.axis.localeCompare(b.axis) || a.code.localeCompare(b.code)));
+    sorted.forEach((p)=>{
+      const idx = projects.indexOf(p);
+
+      const tr = document.createElement("tr");
+
+      // Axis
+      const tdAxis = document.createElement("td");
+      const selAxis = buildSelect(axisList, p.axis);
+      selAxis.onchange = ()=>{ projects[idx].axis = selAxis.value; rerender(); };
+      tdAxis.appendChild(selAxis);
+
+      // Code
+      const tdCode = document.createElement("td");
+      const inCode = document.createElement("input");
+      inCode.type = "text";
+      inCode.value = p.code;
+      inCode.oninput = ()=>{ projects[idx].code = inCode.value.trim(); rerender(false); };
+      tdCode.appendChild(inCode);
+
+      // Name
+      const tdName = document.createElement("td");
+      const inName = document.createElement("input");
+      inName.type = "text";
+      inName.value = p.name;
+      inName.oninput = ()=>{ projects[idx].name = inName.value; rerender(false); };
+      tdName.appendChild(inName);
+
+      // Start Year
+      const tdSY = document.createElement("td");
+      const selSY = buildSelect(years, p.start.y);
+      selSY.onchange = ()=>{ projects[idx].start.y = Number(selSY.value); normalizeDates(projects[idx]); rerender(); };
+      tdSY.appendChild(selSY);
+
+      // Start Q
+      const tdSQ = document.createElement("td");
+      const selSQ = buildSelect(quarters, p.start.q);
+      selSQ.onchange = ()=>{ projects[idx].start.q = Number(selSQ.value); normalizeDates(projects[idx]); rerender(); };
+      tdSQ.appendChild(selSQ);
+
+      // End Year
+      const tdEY = document.createElement("td");
+      const selEY = buildSelect(years, p.end.y);
+      selEY.onchange = ()=>{ projects[idx].end.y = Number(selEY.value); normalizeDates(projects[idx]); rerender(); };
+      tdEY.appendChild(selEY);
+
+      // End Q
+      const tdEQ = document.createElement("td");
+      const selEQ = buildSelect(quarters, p.end.q);
+      selEQ.onchange = ()=>{ projects[idx].end.q = Number(selEQ.value); normalizeDates(projects[idx]); rerender(); };
+      tdEQ.appendChild(selEQ);
+
+      // Action
+      const tdAct = document.createElement("td");
+      const del = document.createElement("button");
+      del.className = "danger";
+      del.textContent = "Supprimer";
+      del.onclick = ()=>{
+        projects.splice(idx,1);
+        rerender();
+      };
+      tdAct.appendChild(del);
+
+      [tdAxis, tdCode, tdName, tdSY, tdSQ, tdEY, tdEQ, tdAct].forEach(td=>tr.appendChild(td));
+      tbody.appendChild(tr);
+    });
+
+    wrap.appendChild(table);
+
+    const hint = document.createElement("div");
+    hint.className = "hint";
+    hint.innerHTML = `
+      <b>Exporter JSON</b> te permet de sauvegarder tes modifications (tu pourras le ré-importer plus tard).
+      <br/>Si tu veux livrer ce planning dans un autre support (PPT / Excel), je peux aussi générer une version “image” ou un tableau.
+    `;
+    wrap.appendChild(hint);
+
+    editor.appendChild(wrap);
+
+    // Wiring buttons
+    setTimeout(()=>{
+      document.getElementById("addRow").onclick = ()=>{
+        projects.push({
+          axis: "Qualité de la donnée",
+          code: "NEW",
+          name: "Nouveau projet",
+          start: {y: 2026, q: 1},
+          end: {y: 2026, q: 1}
+        });
+        rerender();
+      };
+
+      document.getElementById("exportJson").onclick = ()=>{
+        const data = JSON.stringify(projects, null, 2);
+        const blob = new Blob([data], {type:"application/json"});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "portefeuille_projets_planning.json";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      };
+
+      document.getElementById("importJson").onclick = ()=>{
+        document.getElementById("fileInput").click();
+      };
+
+      document.getElementById("fileInput").onchange = async (e)=>{
+        const f = e.target.files?.[0];
+        if(!f) return;
+        try{
+          const text = await f.text();
+          const parsed = JSON.parse(text);
+          if(!Array.isArray(parsed)) throw new Error("JSON invalide (attendu : tableau).");
+          parsed.forEach(p=>{
+            if(!p.start || !p.end) throw new Error("JSON invalide (start/end manquants).");
+            normalizeDates(p);
+          });
+          projects = parsed;
+          rerender();
+        }catch(err){
+          alert("Import impossible : " + err.message);
+        }finally{
+          e.target.value = "";
+        }
+      };
+
+      document.getElementById("reset").onclick = ()=>{
+        projects = JSON.parse(JSON.stringify(initialProjects));
+        rerender();
+      };
+    },0);
+
+    return editor;
+  }
+
+  // === Gantt par année =======================================================
+  function renderYear(y){
+    const active = projects.filter(p => overlapsYear(p, y));
+    active.sort((a,b)=> (a.axis.localeCompare(b.axis) || a.code.localeCompare(b.code)));
+
+    const card = document.createElement("section");
+    card.className = "yearCard";
+
+    const head = document.createElement("div");
+    head.className = "cardHead";
+
+    const title = document.createElement("div");
+    title.className = "cardTitle";
+    title.innerHTML = `<h2>${y}</h2><span class="count">${active.length} projet(s)</span>`;
+
+    head.appendChild(title);
+    card.appendChild(head);
+
+    const wrap = document.createElement("div");
+    wrap.className = "wrap";
+
+    const gantt = document.createElement("div");
+    gantt.className = "gantt";
+
+    const header = document.createElement("div");
+    header.className = "gHeader";
+    header.innerHTML = `<div>T1</div><div>T2</div><div>T3</div><div>T4</div>`;
+    gantt.appendChild(header);
+
+    const rows = document.createElement("div");
+    rows.className = "rows";
+
+    active.forEach((p)=>{
+      const {startQ, endQ} = clampToYear(p, y);
+
+      const row = document.createElement("div");
+      row.className = "row";
+
+      // 4 background cells
+      quarters.forEach(()=>{
+        const c = document.createElement("div");
+        c.className = "cell";
+        row.appendChild(c);
+      });
+
+      // bar spanning
+      const bar = document.createElement("div");
+      bar.className = "bar";
+      bar.style.background = axisColors[p.axis] || "#eaeaea";
+      bar.style.gridColumn = `${startQ} / ${endQ + 1}`;
+      bar.title = `${p.code} — ${p.name} (${p.axis})`;
+      bar.innerHTML = `<span class="name"><span class="code">${p.code}</span> — ${p.name}</span>`;
+      bar.onclick = ()=> openModal(p);
+
+      row.appendChild(bar);
+      rows.appendChild(row);
+    });
+
+    gantt.appendChild(rows);
+    wrap.appendChild(gantt);
+    card.appendChild(wrap);
+
+    return card;
+  }
+
+  // === Modal (édition rapide) ===============================================
+  let modalProjectRef = null;
+
+  function fillSelect(id, opts){
+    const el = document.getElementById(id);
+    el.innerHTML = "";
+    opts.forEach(o=>{
+      const opt = document.createElement("option");
+      opt.value = String(o);
+      opt.textContent = String(o);
+      el.appendChild(opt);
+    });
+    return el;
+  }
+
+  function openModal(p){
+    modalProjectRef = p;
+
+    document.getElementById("modalTitle").textContent = `Éditer : ${p.code}`;
+
+    const mAxis = fillSelect("mAxis", axisList);
+    const mSY = fillSelect("mSY", years);
+    const mSQ = fillSelect("mSQ", quarters);
+    const mEY = fillSelect("mEY", years);
+    const mEQ = fillSelect("mEQ", quarters);
+
+    mAxis.value = p.axis;
+    mSY.value = String(p.start.y);
+    mSQ.value = String(p.start.q);
+    mEY.value = String(p.end.y);
+    mEQ.value = String(p.end.q);
+
+    document.getElementById("mCode").value = p.code;
+    document.getElementById("mName").value = p.name;
+
+    document.getElementById("modalBackdrop").style.display = "flex";
+  }
+
+  function closeModal(){
+    document.getElementById("modalBackdrop").style.display = "none";
+    modalProjectRef = null;
+  }
+
+  function saveModal(){
+    if(!modalProjectRef) return;
+    modalProjectRef.axis = document.getElementById("mAxis").value;
+    modalProjectRef.code = document.getElementById("mCode").value.trim();
+    modalProjectRef.name = document.getElementById("mName").value;
+    modalProjectRef.start.y = Number(document.getElementById("mSY").value);
+    modalProjectRef.start.q = Number(document.getElementById("mSQ").value);
+    modalProjectRef.end.y = Number(document.getElementById("mEY").value);
+    modalProjectRef.end.q = Number(document.getElementById("mEQ").value);
+    normalizeDates(modalProjectRef);
+    rerender();
+    closeModal();
+  }
+
+  // === Render ===============================================================
+  function rerender(resetScroll=true){
+    renderLegend();
+    const app = document.getElementById("app");
+
+    // Preserve scroll position if requested false
+    const y = window.scrollY;
+
+    app.innerHTML = "";
+    app.appendChild(renderEditor());
+    years.forEach(yr => app.appendChild(renderYear(yr)));
+
+    if(!resetScroll) window.scrollTo({top:y, behavior:"instant"});
+  }
+
+  // Modal wiring
+  document.getElementById("modalClose").onclick = closeModal;
+  document.getElementById("modalBackdrop").addEventListener("click", (e)=>{
+    if(e.target.id === "modalBackdrop") closeModal();
+  });
+  document.getElementById("modalSave").onclick = saveModal;
+
+  // ESC to close
+  document.addEventListener("keydown", (e)=>{
+    if(e.key === "Escape") closeModal();
+  });
+
+  rerender();
+</script>
+</body>
+</html>
